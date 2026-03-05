@@ -1,2 +1,7 @@
 (test
- (name test_pog))
+ (name test_pog)
+ (libraries pog))
+
+(test
+ (name test_machine)
+ (libraries pog))

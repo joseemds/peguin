@@ -1,5 +1,3 @@
-(* open Pog *)
-(**)
 (* let test pat expected = *)
 (*   let instr = Pattern.compile pat in *)
 (*   let instrs = Machine.run pat input in *)

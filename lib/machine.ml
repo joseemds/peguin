@@ -1,48 +1,45 @@
-type instr =
-  | Empty
-  | Any
-  | Fail
-  | Char of int
-  | Choice of int
-  | Jump of int
-  | Call of int
-  | Commit of int
-  | Return
-
 module Stack = struct
   type entry = ReturnAddr of int | BacktrackEntry of int * int
   type t = entry list
+  let empty = []
 end
 
 type state = int * int * Stack.t
-type stack = instr Stdlib.Stack.t
+type stack = Op.t Stdlib.Stack.t
 type pos = int
-type vm = { opcode : instr; offset : int; codesize : int }
+type vm = { opcode : Op.t; offset : int; codesize : int }
 
-(*Next instruction; subject curr position; Stack*)
 
-type input = instr * pos * stack
-type program = instr list
+type input = Op.t * pos * stack
+type program = Op.t list
 type transform = Pattern.t -> program
 
-(* let match_ ((instruction, pos, stack) as state) input =  *)
-(*    let module Stack = Stdlib.Stack in *)
-(*    match instruction with *)
-(*   | Char c -> (if String.get input pos = c then *)
-(*       Ok(instruction, pos+1, stack) *)
-(*     else *)
-(*       Error(pos, stack) *)
-(*     ) *)
-(*   | Any  -> (if pos+1 <= String.length input  then *)
-(**)
-(*      Ok(instruction, pos+1, stack) *)
-(*       else  *)
-(*       Error(pos, stack) *)
-(*     ) *)
-(*   | Jump l -> Ok(l, pos, stack) *)
-(*   | Return -> Ok(Stack.pop stack, pos, stack) *)
-(*   | Choice l -> Ok(Stack.pop stack, pos, (Stack.push l stack; stack)) *)
-(*   | Call l -> Ok((Stack.push l stack; l), pos, stack) *)
-(*   | Fail -> Error(pos, stack) *)
-(*   | Commit _ -> Ok(state) *)
-(*   | Empty -> Ok(state) *)
+
+let step ((pc, pos, e) as state) buf pat = match pat with
+| Op.Empty -> state
+| Op.Any -> (pc+1, pos+1, e)
+| Op.Fail -> state
+| Op.Return -> state
+| Op.Char c -> 
+    if Bytes.get buf pos = c then
+      (pc+1, pos+1, e)
+    else
+      state
+| Op.Choice _ -> state
+| Op.Jump _ -> state
+| Op.Call _ -> state
+| Op.Commit _ -> state
+
+let run_ state buf pat =
+  let state' = step state buf pat in
+  state'
+
+let run pat input =
+  let buf = Bytes.of_string input in
+  let _stack = Stack.empty in
+  let instrs = Pattern.compile pat in
+  match instrs with
+  | [] -> (0, 0, Stack.empty)
+  | start :: _rest -> 
+    let initial_state = (0, 0, Stack.empty) in
+    run_ initial_state buf start
