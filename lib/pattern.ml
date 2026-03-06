@@ -6,6 +6,7 @@ type t =
   | Repetition of t
   | Char of char
   | Not of t
+  | And of t
 
 let empty = Empty
 let char c = Char c
@@ -13,7 +14,8 @@ let char c = Char c
 (* let nonterminal nt = NonTerminal nt *)
 let choice e1 e2 = OrderedChoice (e1, e2)
 let not e = Not e
-let pos e = Not (Not e)
+let pos e = And e
+let and_ = pos
 let sequence e1 e2 = Sequence (e1, e2)
 let repeat0 e = Repetition e
 let repeat1 e = sequence e @@ repeat0 e
@@ -26,6 +28,8 @@ let p str =
     (fun acc c -> sequence acc (char c))
     (char @@ List.hd chars)
     (List.tl chars)
+
+let str = p
 
 let rec compile pattern =
   match pattern with
@@ -44,7 +48,10 @@ let rec compile pattern =
   | Repetition e ->
       let p = compile e in
       (Op.Choice (List.length p + 2) :: p)
-      @ [ Op.Commit (-1 * (List.length p + 1)) ]
+      @ [ Op.PartialCommit (-1 * (List.length p + 1)) ]
   | Not e ->
       let p = compile e in
-      (Op.Choice (List.length p + 3) :: p) @ [ Op.Commit 1; Op.Fail ]
+      (Op.Choice (List.length p + 2) :: p) @ [ Op.FailTwice ]
+  | And e ->
+      let p = compile e in
+      (Op.Choice (List.length p + 2) :: p) @ [ Op.BackCommit 2; Op.Fail ]

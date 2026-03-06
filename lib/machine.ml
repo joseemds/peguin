@@ -11,32 +11,49 @@ module Stack = struct
     | BacktrackEntry (lbl, pos) :: stack' -> Some (lbl, pos, stack')
     | _ :: rest -> find_backtrack rest
 
+  let pp ppf = function
+    | ReturnAddr l -> Format.fprintf ppf "ReturnAddr %d" l
+    | BacktrackEntry (lbl, pos) ->
+        Format.fprintf ppf "BacktrackEntry (%d, %d)" lbl pos
+
+  let pop stack =
+    match stack with
+    | [] -> failwith "Can not pop empty stack"
+    | e :: s' -> (e, s')
+
   let empty = []
 end
 
 type state = int * int * Stack.t
 type pos = int
 type program = Op.t list
-type step_result = Finished of state | Continue of state | Fail of state
+type parser_result = (int, int) Result.t
 
-let backtrack_fail stack state =
+type step_result =
+  | Finished of parser_result
+  | Continue of state
+  | Fail of state
+
+let backtrack_fail stack (_pc, pos, _) =
   match Stack.find_backtrack stack with
   | Some state' -> Continue state'
-  | None -> Fail state
+  | None -> Finished (Error pos)
 
 let step ((pc, pos, e) as state) buf program =
-  if pc >= Array.length program then Fail state
+  if pc >= Array.length program then begin
+    Finished (Ok pos)
+  end
   else
     match program.(pc) with
     | Op.Empty -> Continue (pc + 1, pos, e)
     | Op.Any ->
         if pos < Bytes.length buf then Continue (pc + 1, pos + 1, e)
         else Fail state
-    | Op.Fail -> (
-        match Stack.find_backtrack e with
-        | Some state -> Continue state
-        | None -> Fail state)
-    | Op.Return -> Finished state
+    | Op.Fail -> Fail state
+    | Op.Return -> (
+        match e with
+        | Stack.ReturnAddr pc' :: e' -> Continue (pc', pos, e')
+        | _ -> Fail state)
     | Op.Char c ->
         if pos < Bytes.length buf && Bytes.get buf pos = c then
           Continue (pc + 1, pos + 1, e)
@@ -48,12 +65,37 @@ let step ((pc, pos, e) as state) buf program =
     | Op.Call l -> Continue (pc + l, pos, Stack.ReturnAddr (pc + 1) :: e)
     | Op.Commit l -> (
         match e with [] -> Fail state | _h :: e' -> Continue (pc + l, pos, e'))
+    | Op.FailTwice ->
+        let _, stack' = Stack.pop e in
+        let state' = (pc, pos, stack') in
+        Fail state'
+    | Op.PartialCommit l ->
+        let top, stack' = Stack.pop e in
+        let pc', _ =
+          match top with
+          | BacktrackEntry (l, pos) -> (l, pos)
+          | ReturnAddr _addr -> failwith "expected backtrack entry"
+        in
+
+        Continue (pc + l, pos, Stack.BacktrackEntry (pc', l) :: stack')
+    | Op.BackCommit l ->
+        let top, stack' = Stack.pop e in
+        let _, pos' =
+          match top with
+          | BacktrackEntry (l, pos) -> (l, pos)
+          | ReturnAddr _addr -> failwith "expected backtrack entry"
+        in
+        Continue (pc + l, pos', stack')
 
 let rec run_ state buf program =
   match step state buf program with
   | Continue state' -> run_ state' buf program
-  | Finished (_, pos, _) -> pos
-  | Fail (_, pos, _) -> pos
+  | Finished result -> result
+  | Fail (_, _, stack) -> (
+      match backtrack_fail stack state with
+      | Continue state' -> run_ state' buf program
+      | Finished result -> result
+      | _ -> failwith "Unreachable")
 
 let run pat input =
   let buf = Bytes.of_string input in

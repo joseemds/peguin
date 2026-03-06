@@ -1,49 +1,58 @@
 open Peguin
 
-let check_pos input pat expected =
-  let pos = Machine.run pat input in
-  Alcotest.(check int) (Printf.sprintf "%S -> %d" input expected) expected pos
+let test_ok input pat expected =
+  match Machine.run pat input with
+  | Ok pos -> assert (pos = expected)
+  | Error pos ->
+      failwith ("Expected pattern to succeed, fails on pos " ^ string_of_int pos)
+
+let test_fail input pat expected =
+  match Machine.run pat input with
+  | Ok pos ->
+      failwith ("Expected pattern to fail, succeeds on pos " ^ string_of_int pos)
+  | Error pos -> assert (pos = expected)
 
 (* ------------------------------------------------------------------ *)
 (* Empty                                                                *)
 (* ------------------------------------------------------------------ *)
 
 let test_empty () =
-  check_pos "" Pattern.empty 0;
-  check_pos "abc" Pattern.empty 0
+  test_ok "" Pattern.empty 0;
+  test_ok "abc" Pattern.empty 0
 
 (* ------------------------------------------------------------------ *)
 (* Char                                                                 *)
 (* ------------------------------------------------------------------ *)
 
 let test_char () =
-  check_pos "a" (Pattern.char 'a') 1;
-  check_pos "z" (Pattern.char 'z') 1
+  test_ok "a" (Pattern.char 'a') 1;
+  test_ok "z" (Pattern.char 'z') 1;
+  test_fail "b" (Pattern.char 'a') 0
 
 (* ------------------------------------------------------------------ *)
 (* Sequence                                                             *)
 (* ------------------------------------------------------------------ *)
 
 let test_sequence () =
-  check_pos "ab" (Pattern.sequence (Pattern.char 'a') (Pattern.char 'b')) 2;
-  check_pos "abc" (Pattern.p "abc") 3;
-  check_pos "abcd" (Pattern.sequence (Pattern.p "ab") (Pattern.p "cd")) 4
+  test_ok "ab" (Pattern.sequence (Pattern.char 'a') (Pattern.char 'b')) 2;
+  test_ok "abc" (Pattern.p "abc") 3;
+  test_ok "abcd" (Pattern.sequence (Pattern.p "ab") (Pattern.p "cd")) 4
 
 (* ------------------------------------------------------------------ *)
 (* OrderedChoice                                                        *)
 (* ------------------------------------------------------------------ *)
 
 let test_ordered_choice () =
-  check_pos "cat" (Pattern.choice (Pattern.p "cat") (Pattern.p "dog")) 3;
-  check_pos "dog" (Pattern.choice (Pattern.p "cat") (Pattern.p "dog")) 3;
-  check_pos "a" (Pattern.choice (Pattern.char 'a') (Pattern.char 'b')) 1;
-  check_pos "b" (Pattern.choice (Pattern.char 'a') (Pattern.char 'b')) 1;
-  check_pos "a"
+  test_ok "cat" (Pattern.choice (Pattern.p "cat") (Pattern.p "dog")) 3;
+  test_ok "dog" (Pattern.choice (Pattern.p "cat") (Pattern.p "dog")) 3;
+  test_ok "a" (Pattern.choice (Pattern.char 'a') (Pattern.char 'b')) 1;
+  test_ok "b" (Pattern.choice (Pattern.char 'a') (Pattern.char 'b')) 1;
+  test_ok "a"
     (Pattern.choice
        (Pattern.choice (Pattern.char 'a') (Pattern.char 'b'))
        (Pattern.char 'c'))
     1;
-  check_pos "b"
+  test_ok "b"
     (Pattern.choice
        (Pattern.choice (Pattern.char 'a') (Pattern.char 'b'))
        (Pattern.char 'c'))
@@ -54,12 +63,12 @@ let test_ordered_choice () =
 (* ------------------------------------------------------------------ *)
 
 let test_repeat0 () =
-  check_pos "" (Pattern.repeat0 (Pattern.char 'a')) 0;
-  check_pos "a" (Pattern.repeat0 (Pattern.char 'a')) 1;
-  check_pos "aaa" (Pattern.repeat0 (Pattern.char 'a')) 3;
-  check_pos "aaab" (Pattern.repeat0 (Pattern.char 'a')) 3;
-  check_pos "ababab" (Pattern.repeat0 (Pattern.p "ab")) 6;
-  check_pos "abba"
+  test_ok "" (Pattern.repeat0 (Pattern.char 'a')) 0;
+  test_ok "a" (Pattern.repeat0 (Pattern.char 'a')) 1;
+  test_ok "aaa" (Pattern.repeat0 (Pattern.char 'a')) 3;
+  test_ok "aaab" (Pattern.repeat0 (Pattern.char 'a')) 3;
+  test_ok "ababab" (Pattern.repeat0 (Pattern.p "ab")) 6;
+  test_ok "abba"
     (Pattern.repeat0 (Pattern.choice (Pattern.char 'a') (Pattern.char 'b')))
     4
 
@@ -68,9 +77,9 @@ let test_repeat0 () =
 (* ------------------------------------------------------------------ *)
 
 let test_repeat1 () =
-  check_pos "a" (Pattern.repeat1 (Pattern.char 'a')) 1;
-  check_pos "aaa" (Pattern.repeat1 (Pattern.char 'a')) 3;
-  check_pos "aaab" (Pattern.repeat1 (Pattern.char 'a')) 3
+  test_ok "a" (Pattern.repeat1 (Pattern.char 'a')) 1;
+  test_ok "aaa" (Pattern.repeat1 (Pattern.char 'a')) 3;
+  test_ok "aaab" (Pattern.repeat1 (Pattern.char 'a')) 3
 
 (* ------------------------------------------------------------------ *)
 (* Not — negative lookahead                                             *)
@@ -78,22 +87,27 @@ let test_repeat1 () =
 
 let test_not () =
   (* not 'b' succeeds on 'a', consuming nothing *)
-  check_pos "a" (Pattern.not (Pattern.char 'b')) 0;
+  test_ok "a" (Pattern.not (Pattern.char 'b')) 0;
   (* not followed by char — lookahead then consume *)
-  check_pos "a"
+  test_ok "a"
     (Pattern.sequence (Pattern.not (Pattern.char 'b')) (Pattern.char 'a'))
     1
+
+(*p <- !'ab' 'b' *)
+(* test_ok  "abb" (Pattern.sequence (Pattern.p "ab") (Pattern.not (Pattern.char 'b'))) *)
+(* 2 *)
 
 (* ------------------------------------------------------------------ *)
 (* pos — positive lookahead (not (not e))                               *)
 (* ------------------------------------------------------------------ *)
 
 let test_pos () =
-  check_pos "a" (Pattern.pos (Pattern.char 'a')) 0;
-  check_pos "a"
+  test_ok "a" (Pattern.pos (Pattern.char 'a')) 0;
+  test_ok "a"
     (Pattern.sequence (Pattern.pos (Pattern.char 'a')) (Pattern.char 'a'))
     1;
-  check_pos "ab" (Pattern.pos (Pattern.p "ab")) 0
+  test_ok "ab" (Pattern.pos (Pattern.p "ab")) 0;
+  test_fail "bb" (Pattern.and_ (Pattern.p "aa")) 0
 
 (* ------------------------------------------------------------------ *)
 (* Composed patterns                                                    *)
@@ -122,25 +136,26 @@ let space = Pattern.repeat0 (Pattern.char ' ')
 let bool_lit = Pattern.choice (Pattern.p "true") (Pattern.p "false")
 
 let test_composed () =
-  check_pos "123abc" (Pattern.repeat1 digit) 3;
-  check_pos "0" (Pattern.repeat1 digit) 1;
-  check_pos "   abc" (Pattern.sequence space (Pattern.p "abc")) 6;
-  check_pos "true" bool_lit 4;
-  check_pos "false" bool_lit 5
+  test_ok "123abc" (Pattern.repeat1 digit) 3;
+  test_ok "0" (Pattern.repeat1 digit) 1;
+  test_ok "   abc" (Pattern.sequence space (Pattern.p "abc")) 6;
+  test_ok "true" bool_lit 4;
+  test_ok "false" bool_lit 5
 
 let test_not_keyword () =
   (* "ifoo" starts with "if" so not (p "if") fails *)
-  check_pos "ifoo"
+  test_fail "if"
     (Pattern.sequence
        (Pattern.not (Pattern.p "if"))
        (Pattern.repeat1 (Pattern.choice (Pattern.char 'i') (Pattern.char 'f'))))
     2;
   (* "ig" does not start with "if" so not succeeds *)
-  check_pos "ig"
+  test_ok "ig"
     (Pattern.sequence
        (Pattern.not (Pattern.p "if"))
        (Pattern.repeat1 (Pattern.choice (Pattern.char 'i') (Pattern.char 'g'))))
-    2
+    2;
+  test_ok "a" (Pattern.not (Pattern.char 'b')) 0
 
 (* ------------------------------------------------------------------ *)
 (* Suite                                                                *)
