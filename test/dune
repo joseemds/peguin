@@ -4,4 +4,4 @@
 
 (test
  (name test_machine)
- (libraries pog))
+ (libraries alcotest pog))

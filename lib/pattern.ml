@@ -17,6 +17,16 @@ let pos e = Not (Not e)
 let sequence e1 e2 = Sequence (e1, e2)
 let repeat0 e = Repetition e
 let repeat1 e = sequence e @@ repeat0 e
+let ( % ) = sequence
+let ( / ) = choice
+
+
+let p str =
+  let chars = String.to_seq str |> List.of_seq in
+  List.fold_left
+    (fun acc c -> sequence acc (char c))
+    (char @@ List.hd chars)
+    (List.tl chars)
 
 let rec compile pattern =
   match pattern with
