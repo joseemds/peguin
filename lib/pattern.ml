@@ -20,7 +20,6 @@ let repeat1 e = sequence e @@ repeat0 e
 let ( % ) = sequence
 let ( / ) = choice
 
-
 let p str =
   let chars = String.to_seq str |> List.of_seq in
   List.fold_left

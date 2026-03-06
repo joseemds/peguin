@@ -10,6 +10,6 @@ let test input pat expected =
   Printf.printf "Test %d, pos %d\n" !n pos;
   assert (pos = expected)
 
-let () = 
-   let open Pattern in
-   test "salve" (p"oi" / p"testando" / p"sal" % p"ve") 5
+let () =
+  let open Pattern in
+  test "salve" (p "oi" / p "testando" / p "sal" % p "ve") 5

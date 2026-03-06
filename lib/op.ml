@@ -9,11 +9,10 @@ type t =
   | Commit of int
   | Return
 
-
-let pp ppf op = 
+let pp ppf op =
   let pf = Format.fprintf in
   match op with
-  | Empty  -> pf ppf "Empty"
+  | Empty -> pf ppf "Empty"
   | Any -> pf ppf "Any"
   | Fail -> pf ppf "Fail"
   | Char c -> pf ppf "Char %c" c
