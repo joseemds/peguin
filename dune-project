@@ -1,6 +1,6 @@
 (lang dune 3.20)
 
-(name pog)
+(name peguin)
 
 (generate_opam_files true)
 
@@ -16,7 +16,7 @@
 (documentation https://url/to/documentation)
 
 (package
- (name pog)
+ (name peguin)
  (synopsis "A short synopsis")
  (description "A longer description")
  (depends ocaml)

@@ -1,4 +1,4 @@
 (executable
- (public_name pog)
+ (public_name peguin)
  (name main)
- (libraries pog))
+ (libraries peguin))

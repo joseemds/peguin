@@ -1,4 +1,4 @@
-(* open Pog *)
+(* open peguin *)
 (**)
 (* let test pat expected = *)
 (*   let instr = Pattern.compile pat in *)

@@ -1,4 +1,4 @@
-open Pog
+open Peguin
 
 let check_pos input pat expected =
   let pos = Machine.run pat input in
@@ -147,7 +147,7 @@ let test_not_keyword () =
 (* ------------------------------------------------------------------ *)
 
 let () =
-  Alcotest.run "pog.machine" [
+  Alcotest.run "peguin.machine" [
     "empty",          [ Alcotest.test_case "empty pattern"      `Quick test_empty         ];
     "char",           [ Alcotest.test_case "single char"        `Quick test_char           ];
     "sequence",       [ Alcotest.test_case "sequence"           `Quick test_sequence       ];
