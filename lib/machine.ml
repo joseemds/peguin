@@ -41,7 +41,7 @@ let backtrack_fail stack (_pc, pos, _) =
 
 let step ((pc, pos, e) as state) buf program =
   if pc >= Array.length program then begin
-    Finished (Ok pos)
+    failwith "pc overflow"
   end
   else
     match program.(pc) with
@@ -86,6 +86,7 @@ let step ((pc, pos, e) as state) buf program =
           | ReturnAddr _addr -> failwith "expected backtrack entry"
         in
         Continue (pc + l, pos', stack')
+    | Op.Finish -> Finished (Ok pos)
 
 let rec run_ state buf program =
   match step state buf program with
@@ -100,6 +101,6 @@ let rec run_ state buf program =
 let run pat input =
   let buf = Bytes.of_string input in
   let stack = Stack.empty in
-  let program = Array.of_list @@ Pattern.compile pat in
+  let program = Array.of_list @@ Pattern.compile pat @ [ Op.Finish ] in
   let state = (0, 0, stack) in
   run_ state buf program

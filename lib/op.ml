@@ -11,6 +11,7 @@ type t =
   | Call of int
   | Commit of int
   | Return
+  | Finish
 
 let pp ppf op =
   let pf = Format.fprintf in
@@ -27,3 +28,4 @@ let pp ppf op =
   | PartialCommit lbl -> pf ppf "PartialCommit(%d)" lbl
   | BackCommit l -> pf ppf "Commit(%d)" l
   | Return -> pf ppf "Return"
+  | Finish -> pf ppf "Finish"
